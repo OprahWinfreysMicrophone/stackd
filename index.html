@@ -1277,8 +1277,15 @@ function unlockReward(id,cost,name){
 // ── DEBRIEF ──
 function renderDebrief(){
   const choreXP=getChoreXP();const schoolXP=getSchoolXPToday();
-  const doneChores=CHORES.filter((_,i)=>isChoresDone(i)).length;
-  const pct=CHORES.length>0?Math.round((doneChores/CHORES.length)*100):0;
+
+  // Count all completable items: schedule blocks + sub-items + chores
+  let totalItems=0,doneItems=0;
+  BLOCKS.filter(b=>b.block&&typeof b.schedIdx==='number').forEach(b=>{
+    totalItems++;if(isSchedDone(b.schedIdx))doneItems++;
+    (b.items||[]).forEach(it=>{totalItems++;if(isSchedDone(it.schedIdx))doneItems++;});
+  });
+  CHORES.forEach((_,i)=>{totalItems++;if(isChoresDone(i))doneItems++;});
+  const pct=totalItems>0?Math.round((doneItems/totalItems)*100):0;
   const streak=getStreak();const{rank,total,next,pct:rpct}=getRankData();
   document.getElementById('d-chore-xp').textContent=choreXP;
   document.getElementById('d-school-xp').textContent=schoolXP;
