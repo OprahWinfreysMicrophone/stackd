@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Stackd">
-<meta name="theme-color" content="#4c1d95">
+<meta name="theme-color" content="#3b0764">
 <title>Stackd</title>
 <!-- Apply theme immediately to prevent flash -->
 <script>
@@ -534,6 +534,30 @@ body{font-family:'Sora',sans-serif;color:var(--txt);overscroll-behavior:none;-we
 
 
 /* -- PARENT DASHBOARD -- */
+.parent-save-bar{
+  position:sticky;top:0;z-index:50;
+  display:flex;align-items:center;justify-content:space-between;
+  background:var(--accent);
+  padding:10px 14px;border-radius:var(--radius-sm);
+  margin-bottom:12px;gap:10px;
+}
+.parent-save-hint{
+  font-size:11px;font-weight:600;color:#fff;flex:1;text-align:center;opacity:.85;
+}
+.btn-save-confirm{
+  background:#fff;color:var(--accent);border:none;
+  font-family:"Sora",sans-serif;font-size:12px;font-weight:700;
+  padding:8px 14px;border-radius:var(--radius-xs);cursor:pointer;
+  white-space:nowrap;
+}
+.btn-save-confirm:active{opacity:.8;}
+.btn-save-cancel{
+  background:rgba(255,255,255,.2);color:#fff;border:none;
+  font-family:"Sora",sans-serif;font-size:12px;font-weight:600;
+  padding:8px 14px;border-radius:var(--radius-xs);cursor:pointer;
+  white-space:nowrap;
+}
+.btn-save-cancel:active{opacity:.8;}
 .parent-tabs{display:flex;gap:4px;margin-bottom:14px;background:var(--panel);
   border:1px solid var(--border);border-radius:var(--radius);padding:4px;}
 .ptab{flex:1;padding:8px 4px;border:none;background:transparent;border-radius:var(--radius-sm);
@@ -606,6 +630,50 @@ body{font-family:'Sora',sans-serif;color:var(--txt);overscroll-behavior:none;-we
 .parent-btn:hover{border-color:var(--accent);transform:scale(1.05);}
 .parent-btn:active{transform:scale(.95);}
 
+
+/* -- TIMER WARNING STYLES -- */
+@keyframes gentlePulse{
+  0%,100%{transform:scale(1);box-shadow:var(--shadow);}
+  50%{transform:scale(1.012);box-shadow:0 0 24px rgba(124,58,237,.2);}
+}
+@keyframes gentlePulseWarn{
+  0%,100%{transform:scale(1);box-shadow:var(--shadow);}
+  50%{transform:scale(1.015);box-shadow:0 0 28px rgba(240,165,0,.25);}
+}
+@keyframes gentlePulseEnd{
+  0%,100%{transform:scale(1);box-shadow:var(--shadow);}
+  50%{transform:scale(1.018);box-shadow:0 0 32px rgba(248,113,113,.3);}
+}
+.timer-pulse-warn{animation:gentlePulseWarn 2.5s ease-in-out infinite;}
+.timer-pulse-end{animation:gentlePulseEnd 1.8s ease-in-out infinite;}
+
+/* Screen tint overlay */
+#warn-tint{
+  position:fixed;inset:0;pointer-events:none;z-index:9990;opacity:0;
+  transition:opacity 3s ease;background:rgba(240,165,0,.06);
+}
+#warn-tint.warn-active{opacity:1;}
+#warn-tint.end-active{background:rgba(248,113,113,.08);opacity:1;}
+/* -- WARN OPTION BUTTONS -- */
+.warn-opt-btn{
+  background:var(--panel2);border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:12px 14px;cursor:pointer;text-align:left;width:100%;
+  font-family:"Sora",sans-serif;transition:all .15s;position:relative;
+}
+.warn-opt-btn:hover{border-color:var(--accent);}
+.warn-opt-active{background:var(--accent-dim) !important;border-color:var(--accent) !important;}
+.warn-opt-label{font-size:13px;font-weight:700;color:var(--txt);margin-bottom:2px;}
+.warn-opt-active .warn-opt-label{color:var(--accent);}
+.warn-opt-desc{font-size:11px;color:var(--txt3);}
+.warn-play-btn{
+  position:absolute;right:12px;top:50%;transform:translateY(-50%);
+  background:var(--accent);color:#fff;border:none;border-radius:20px;
+  font-family:"Sora",sans-serif;font-size:11px;font-weight:700;
+  padding:5px 12px;cursor:pointer;
+}
+.warn-play-btn:active{opacity:.8;}
+@keyframes warnPulsePreview{0%,100%{transform:scale(1);}50%{transform:scale(1.015);}}
+.warn-preview-pulse{animation:warnPulsePreview 2.5s ease-in-out infinite;}
 /* -- THEME TOGGLE -- */
 .theme-toggle{background:var(--panel2);border:1px solid var(--border);border-radius:20px;
   padding:5px 10px;cursor:pointer;font-size:14px;line-height:1;
@@ -627,6 +695,7 @@ body{font-family:'Sora',sans-serif;color:var(--txt);overscroll-behavior:none;-we
 </head>
 <body>
 
+<div id="warn-tint"></div>
 <div class="toast" id="toast"></div>
 <div class="xp-flash" id="xp-flash"></div>
 <div class="time-flash" id="time-flash"></div>
@@ -719,48 +788,35 @@ body{font-family:'Sora',sans-serif;color:var(--txt);overscroll-behavior:none;-we
               </div>
             </div>
             <div class="stat-box">
-              <div class="stat-box-lbl">Weather</div>
-              <div class="stat-box-val" id="b-temp">--<sup>°F</sup></div>
-              <div class="stat-box-sub" id="b-cond">Loading...</div>
+              <div class="stat-box-lbl">Today's XP</div>
+              <div class="stat-box-val" id="b-temp" style="color:var(--xp)" id="home-school-xp">0</div>
+              <div class="stat-box-sub" id="b-cond">School XP today</div>
               <div class="stat-box-cells">
-                <div class="stat-cell"><div class="sc-lbl">Feels</div><div class="sc-val" id="b-fl">--</div></div>
-                <div class="stat-cell"><div class="sc-lbl">Wind</div><div class="sc-val" id="b-wnd">--</div></div>
-                <div class="stat-cell"><div class="sc-lbl">Humid</div><div class="sc-val" id="b-hum">--</div></div>
+                <div class="stat-cell"><div class="sc-lbl">Done</div><div class="sc-val" id="b-fl" id="home-done">0</div></div>
+                <div class="stat-cell"><div class="sc-lbl">Left</div><div class="sc-val" id="b-wnd" id="home-left">0</div></div>
+                <div class="stat-cell"><div class="sc-lbl">Total</div><div class="sc-val" id="b-hum" id="home-total">0</div></div>
               </div>
             </div>
           </div>
 
-          <div class="block-card">
-            <div class="bc-eyebrow">Right now</div>
+          <div class="block-card" id="home-school-card">
+            <div class="bc-eyebrow">Today's session</div>
             <div class="bc-name" id="b-block-name">Loading...</div>
-            <div class="bc-timer" id="b-timer">--:--</div>
-            <div class="bc-lbl">hours : minutes left</div>
+            <div class="bc-timer" id="b-timer" style="font-size:32px;">--</div>
+            <div class="bc-lbl">subjects remaining</div>
             <div class="bc-prog-track"><div class="bc-prog-fill" id="b-prog" style="width:0%"></div></div>
-            <div class="bc-next" id="b-next">Up next: <span>--</span></div>
+            <div class="bc-next" id="b-next">XP available: <span>--</span></div>
           </div>
 
-          <div class="panel">
-            <div class="ph">Today's timeline <div class="ph-line"></div></div>
-            <div class="upcoming-list" id="b-upcoming"><div class="loading-msg">Loading...</div></div>
-          </div>
 
-          <div class="btn-row">
-            <button class="btn btn-primary" onclick="nav('mission')">View Schedule</button>
-            <button class="btn btn-school" onclick="nav('school')">📚 School</button>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:0;">
+            <button class="btn btn-primary" onclick="nav('mission')" style="margin-top:0;">View Schedule</button>
+            <button class="btn btn-school" onclick="nav('school')" style="margin-top:0;">📚 School</button>
           </div>
 
         </div>
-      </div>
-
-      <!-- SCHEDULE -->
-      <div class="screen" id="s-mission">
-        <div class="panel">
-          <div class="ph">Today's schedule <div class="ph-line"></div><span class="ph-count" id="m-count"></span></div>
-          <div id="m-schedule"><div class="loading-msg">Loading...</div></div>
-        </div>
-      </div>
-
-      <!-- SCHOOL -->
+      </div><!-- SCHOOL -->
       <div class="screen" id="s-school">
 
         <div id="school-noday" style="display:none;">
@@ -819,9 +875,8 @@ body{font-family:'Sora',sans-serif;color:var(--txt);overscroll-behavior:none;-we
           <div class="sc-msg" id="sc-msg">All subjects done. Great work today.</div>
           <button class="btn btn-ghost" style="max-width:260px;margin:0 auto;" onclick="requirePin('resetschool')">↺ Reset (Parent)</button>
         </div>
-      </div>
+      </div><!-- REWARDS -->
 
-      <!-- TASKS -->
       <div class="screen" id="s-activities">
         <div class="xp-hero">
           <div class="xp-lbl">XP Earned Today</div>
@@ -872,7 +927,7 @@ body{font-family:'Sora',sans-serif;color:var(--txt);overscroll-behavior:none;-we
           <div class="rh-msg" id="d-msg">Check back at the end of the day.</div>
         </div>
         <div class="stat-grid">
-          <div class="stat-cell-box"><div class="stat-cell-lbl">Task XP</div><div class="stat-cell-val" id="d-chore-xp">0</div></div>
+          <div class="stat-cell-box"><div class="stat-cell-lbl">Session XP</div><div class="stat-cell-val" id="d-chore-xp">0</div></div>
           <div class="stat-cell-box"><div class="stat-cell-lbl">School XP</div><div class="stat-cell-val" id="d-school-xp" style="color:var(--cat-school)">0</div></div>
           <div class="stat-cell-box"><div class="stat-cell-lbl">Level</div><div class="stat-cell-val" id="d-rank-abbr">—</div></div>
         </div>
@@ -899,11 +954,17 @@ body{font-family:'Sora',sans-serif;color:var(--txt);overscroll-behavior:none;-we
 
       <!-- PARENT DASHBOARD -->
       <div class="screen" id="s-parent">
-          <div class="parent-tabs">
+          <div class="parent-save-bar" id="parent-save-bar" style="display:none;">
+          <button class="btn-save-cancel" onclick="cancelParentChanges()">Cancel</button>
+          <span class="parent-save-hint" id="parent-save-hint">Unsaved changes</span>
+          <button class="btn-save-confirm" onclick="saveParentChanges()">Save Changes</button>
+        </div>
+        <div class="parent-tabs">
             <button class="ptab active" id="ptab-schedule" onclick="ptab('schedule')">Schedule</button>
             <button class="ptab" id="ptab-tasks" onclick="ptab('tasks')">Tasks</button>
             <button class="ptab" id="ptab-school" onclick="ptab('school')">School</button>
             <button class="ptab" id="ptab-rewards" onclick="ptab('rewards')">Rewards</button>
+            <button class="ptab" id="ptab-warnings" onclick="ptab('warnings')">Warnings</button>
             <button class="ptab" id="ptab-settings" onclick="ptab('settings')">Settings</button>
           </div>
           <div class="ptab-content active" id="pc-schedule">
@@ -920,7 +981,7 @@ body{font-family:'Sora',sans-serif;color:var(--txt);overscroll-behavior:none;-we
             </div>
             <div id="task-editor-list"></div>
           </div>
-          <div class="ptab-content" id="pc-school">
+          <div class="ptab-content active" id="pc-school">
             <div class="parent-toolbar">
               <span class="parent-hint">Set school days and subjects.</span>
               <button class="btn-add" onclick="addSubject()">+ Add Subject</button>
@@ -938,12 +999,91 @@ body{font-family:'Sora',sans-serif;color:var(--txt);overscroll-behavior:none;-we
             </div>
             <div id="reward-editor-list"></div>
           </div>
-          <div class="ptab-content" id="pc-settings">
+                    <div class="ptab-content" id="pc-warnings">
+
+            <!-- LIVE PREVIEW CARD -->
+            <div class="panel" id="warn-preview-card" style="margin-bottom:12px;text-align:center;position:relative;overflow:hidden;">
+              <div style="font-size:10px;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px;">Live Preview</div>
+              <div style="font-size:10px;color:var(--txt3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;" id="wp-subject-lbl">Math — lesson 2 of 4</div>
+              <div id="wp-timer" style="font-family:'JetBrains Mono',monospace;font-size:52px;font-weight:500;color:var(--accent);line-height:1;transition:background 1.5s ease,color .3s,padding .3s,border-radius .3s;">04:00</div>
+              <div style="font-size:10px;color:var(--txt3);text-transform:uppercase;letter-spacing:.4px;margin-top:5px;" id="wp-timer-lbl">time remaining</div>
+              <div style="height:4px;background:var(--border2);border-radius:2px;margin:14px 0 0;">
+                <div id="wp-fill" style="height:100%;background:var(--accent);border-radius:2px;width:30%;transition:background 1.5s ease;"></div>
+              </div>
+              <div style="display:flex;gap:8px;margin-top:12px;">
+                <button class="btn btn-ghost" style="flex:1;font-size:12px;margin-top:0;" onclick="wpPreview('warn')">Preview Warning</button>
+                <button class="btn btn-ghost" style="flex:1;font-size:12px;margin-top:0;" onclick="wpPreview('end')">Preview End</button>
+                <button class="btn btn-ghost" style="flex:1;font-size:12px;margin-top:0;" onclick="wpReset()">Reset</button>
+              </div>
+            </div>
+
+            <!-- VISUAL STYLE -->
+            <div class="panel" style="margin-bottom:12px;">
+              <div class="ph">Visual style <div class="ph-line"></div></div>
+              <div style="display:flex;flex-direction:column;gap:8px;" id="wp-visual-options">
+                <button class="warn-opt-btn warn-opt-active" id="wopt-color" onclick="wpSetVisual('color')">
+                  <div class="warn-opt-label">Color shift</div>
+                  <div class="warn-opt-desc">Timer pill fades purple → amber → red</div>
+                </button>
+                <button class="warn-opt-btn" id="wopt-pulse" onclick="wpSetVisual('pulse')">
+                  <div class="warn-opt-label">Soft pulse</div>
+                  <div class="warn-opt-desc">Card gently breathes — no flashing</div>
+                </button>
+                <button class="warn-opt-btn" id="wopt-both" onclick="wpSetVisual('both')">
+                  <div class="warn-opt-label">Both</div>
+                  <div class="warn-opt-desc">Color shift + soft pulse together</div>
+                </button>
+              </div>
+            </div>
+
+            <!-- CHIME -->
+            <div class="panel" style="margin-bottom:12px;">
+              <div class="ph">Warning chime <div class="ph-line"></div></div>
+              <div style="display:flex;flex-direction:column;gap:8px;">
+                <button class="warn-opt-btn warn-opt-active" id="wopt-soft" onclick="wpSetChime('soft')">
+                  <div class="warn-opt-label">Soft chime</div>
+                  <div class="warn-opt-desc">Gentle ascending bells</div>
+                  <button class="warn-play-btn" onclick="event.stopPropagation();wpPlayChime('soft')">&#9654; Play</button>
+                </button>
+                <button class="warn-opt-btn" id="wopt-bowl" onclick="wpSetChime('bowl')">
+                  <div class="warn-opt-label">Singing bowl</div>
+                  <div class="warn-opt-desc">Calm, resonant tone with harmonics</div>
+                  <button class="warn-play-btn" onclick="event.stopPropagation();wpPlayChime('bowl')">&#9654; Play</button>
+                </button>
+                <button class="warn-opt-btn" id="wopt-marimba" onclick="wpSetChime('marimba')">
+                  <div class="warn-opt-label">Marimba</div>
+                  <div class="warn-opt-desc">Light, cheerful notes</div>
+                  <button class="warn-play-btn" onclick="event.stopPropagation();wpPlayChime('marimba')">&#9654; Play</button>
+                </button>
+                <button class="warn-opt-btn" id="wopt-none" onclick="wpSetChime('none')">
+                  <div class="warn-opt-label">No chime</div>
+                  <div class="warn-opt-desc">Visual only, no sound</div>
+                </button>
+              </div>
+            </div>
+
+            <!-- TRIGGER TIMING -->
+            <div class="panel">
+              <div class="ph">Trigger timing <div class="ph-line"></div></div>
+              <div class="setting-row">
+                <label class="setting-lbl">Warn at</label>
+                <select class="field-select" id="set-warn-mins" style="flex:1;" onchange="if(!STAGING)startEditing();STAGING.config.warnMins=parseInt(this.value);">
+                  <option value="2">2 minutes left</option>
+                  <option value="3">3 minutes left</option>
+                  <option value="5" selected>5 minutes left</option>
+                  <option value="7">7 minutes left</option>
+                  <option value="10">10 minutes left</option>
+                </select>
+              </div>
+            </div>
+
+          </div>
+<div class="ptab-content" id="pc-settings">
             <div class="panel">
               <div class="ph">Profile <div class="ph-line"></div></div>
               <div class="setting-row">
                 <label class="setting-lbl">Kid's name</label>
-                <input class="setting-input" id="set-kidname" type="text" placeholder="e.g. Lincoln" oninput="DB.config.kidName=this.value;DB.save();updateKidName();renderBrief();">
+                <input class="setting-input" id="set-kidname" type="text" placeholder="e.g. Lincoln" oninput="if(!STAGING)startEditing();STAGING.config.kidName=this.value;">
               </div>
             </div>
             <div class="panel">
@@ -1139,6 +1279,45 @@ const DB = {
   // _exportPayload(){ return {schedule:this.schedule,tasks:this.tasks,subjects:this.subjects,rewards:this.rewards,config:this.config}; },
 };
 
+// -- STAGING (edit buffer) --
+var STAGING = null; // holds deep copy of DB data while editing
+
+function startEditing(){
+  STAGING = {
+    schedule: JSON.parse(JSON.stringify(DB.schedule)),
+    tasks:    JSON.parse(JSON.stringify(DB.tasks)),
+    subjects: JSON.parse(JSON.stringify(DB.subjects)),
+    rewards:  JSON.parse(JSON.stringify(DB.rewards)),
+    config:   JSON.parse(JSON.stringify(DB.config)),
+  };
+  el("parent-save-bar").style.display="flex";
+}
+
+function saveParentChanges(){
+  if(!STAGING)return;
+  DB.schedule = STAGING.schedule;
+  DB.tasks    = STAGING.tasks;
+  DB.subjects = STAGING.subjects;
+  DB.rewards  = STAGING.rewards;
+  DB.config   = STAGING.config;
+  DB.save();
+  STAGING = null;
+  el("parent-save-bar").style.display="none";
+  showToast("Changes saved ✓");
+  updateKidName();
+  nav('brief');
+}
+
+function cancelParentChanges(){
+  STAGING = null;
+  el("parent-save-bar").style.display="none";
+  showToast("Changes discarded.");
+  nav('brief');
+}
+
+// Helper: get active data (staging if editing, else DB)
+function getData(key){ return STAGING ? STAGING[key] : DB[key]; }
+
 // -- CONSTANTS --
 const RANKS=[
   {name:'Rookie',abbr:'RK',min:0,max:500},
@@ -1189,7 +1368,7 @@ function showParentScreen(){
 function nav(screen){
   if(screen==='parent'&&!parentUnlocked){
     // Show locked state, then require PIN
-    const screens=['brief','mission','school','activities','rewards','debrief','parent'];
+    const screens=['brief','school','rewards','debrief','parent'];
     screens.forEach(s=>{const sc=el('s-'+s);if(sc)sc.classList.remove('active');const nb=el('nb-'+s);if(nb){nb.classList.remove('active');nb.classList.remove('school-active');}});
     el('s-parent').classList.add('active');
     el('nb-parent').classList.add('active');
@@ -1197,14 +1376,14 @@ function nav(screen){
     el('app-title').textContent='Parent';
     return;
   }
-  const screens=['brief','mission','school','activities','rewards','debrief','parent'];
+  const screens=['brief','school','rewards','debrief','parent'];
   screens.forEach(s=>{const sc=el('s-'+s);if(sc)sc.classList.remove('active');const nb=el('nb-'+s);if(nb){nb.classList.remove('active');nb.classList.remove('school-active');}});
   const sc=el('s-'+screen);if(sc)sc.classList.add('active');
   const nb=el('nb-'+screen);
   if(nb){if(screen==='school')nb.classList.add('school-active');else nb.classList.add('active');}
-  const titles={brief:'stackd',mission:'Schedule',school:'School',activities:'Tasks',rewards:'Rewards',debrief:'Daily Report',parent:'Parent'};
+  const titles={brief:'stackd · school',school:'School',rewards:'Rewards',debrief:'Daily Report',parent:'Parent'};
   el('app-title').textContent=titles[screen]||'stackd';
-  const renders={brief:renderBrief,mission:renderMission,school:renderSchool,activities:renderActivities,rewards:renderRewards,debrief:renderDebrief,parent:renderParent};
+  const renders={brief:renderBrief,school:renderSchool,rewards:renderRewards,debrief:renderDebrief,parent:renderParent};
   if(renders[screen])renders[screen]();
 }
 
@@ -1319,6 +1498,108 @@ const NO_SCHOOL_MSGS=[
   ['🎵','Free time','No school today. Do something you love.'],
 ];
 
+function renderMission(){
+  const totalMins=new Date().getHours()*60+new Date().getMinutes();
+  const cur=getCurrentBlock();const sched=el('m-schedule');sched.innerHTML='';
+  let bc=0;
+  DB.schedule.filter(b=>isActiveDay(b.days)&&b.start).forEach(b=>{
+    bc++;
+    const sm=toMins(b.start);const em=b.end?toMins(b.end):sm+90;
+    const isCur=cur&&cur.block===b;const isDone=em!==null&&totalMins>=em&&!isCur;
+    const color=CAT_COLOR[b.category]||CAT_COLOR.chore;const bg=CAT_BG[b.category]||CAT_BG.chore;
+    const timeStr=b.end?b.start+'–'+b.end:b.start;
+    const group=document.createElement('div');group.className='block-group';if(isDone)group.style.opacity='.4';
+    const hdr=document.createElement('div');hdr.className='bg-hdr';
+    hdr.style.cssText='border-left-color:'+color+';background:'+(isCur?bg:'var(--panel)');
+    hdr.innerHTML='<div class="bg-hdr-name" style="color:'+(isCur?color:'var(--txt)')+'">'+b.block+'</div><div class="bg-hdr-time">'+timeStr+'</div>'+(isCur?'<span class="now-badge">Now</span>':'');
+    group.appendChild(hdr);
+    if(b.items&&b.items.length){
+      const id=document.createElement('div');id.className='bg-items';
+      b.items.forEach(item=>{
+        const ir=document.createElement('div');ir.className='act-row'+(isCur?' cur':'');ir.style.borderLeftColor=color;
+        ir.innerHTML='<div class="ar-dot" style="background:'+color+'"></div><span class="ar-lbl">'+item.name+'</span>';
+        id.appendChild(ir);
+      });
+      group.appendChild(id);
+    }
+    sched.appendChild(group);
+  });
+  el('m-count').textContent=bc+' blocks';
+  if(!bc)sched.innerHTML='<div class="loading-msg">No schedule yet - add blocks in the Parent tab.</div>';
+}
+
+// -- SCHOOL --
+
+function renderActivities(){
+  let totalXP=0,earnedXP=0;
+  DB.schedule.filter(b=>isActiveDay(b.days)).forEach(b=>{
+    totalXP+=(b.xp||0);if(DB.isBlockDone(b.id))earnedXP+=(b.xp||0);
+    (b.items||[]).forEach(it=>{totalXP+=(it.xp||0);if(DB.isSubitemDone(it.id))earnedXP+=(it.xp||0);});
+  });
+  DB.tasks.filter(t=>isActiveDay(t.days)).forEach(t=>{totalXP+=t.xp;if(DB.isTaskDone(t.id))earnedXP+=t.xp;});
+  const pct=totalXP>0?Math.round((earnedXP/totalXP)*100):0;
+  el('a-xp-val').textContent=earnedXP;
+  el('a-xp-max').textContent='/ '+totalXP+' XP available';
+  el('a-xp-fill').style.width=pct+'%';
+
+  // Schedule blocks
+  const sl=el('a-sched-list');sl.innerHTML='';let sc=0;
+  DB.schedule.filter(b=>isActiveDay(b.days)&&b.block).forEach(b=>{
+    const color=CAT_COLOR[b.category]||CAT_COLOR.chore;const done=DB.isBlockDone(b.id);
+    const hdr=document.createElement('div');hdr.className='task-item'+(done?' done':'');hdr.style.borderLeftColor=color;
+    const ts=b.start?(b.end?b.start+'–'+b.end:b.start):'';
+    hdr.innerHTML='<div class="ti-check"></div><span class="ti-lbl" style="font-weight:700;">'+b.block+(ts?' <span style="font-size:10px;color:var(--txt3);font-weight:400;">'+ts+'</span>':'')+'</span><span class="ti-xp">'+(done?'✓ ':'+')+(b.xp||0)+'</span>';
+    if(!done)hdr.onclick=()=>{DB.setBlockDone(b.id);if(b.xp>0){DB.addChoreXP(b.xp);DB.addSpendable(b.xp);showXPFlash('+'+b.xp+' XP');playXP();}renderActivities();};
+    sl.appendChild(hdr);sc++;
+    (b.items||[]).forEach(it=>{
+      const idone=DB.isSubitemDone(it.id);
+      const row=document.createElement('div');row.className='task-item'+(idone?' done':'');
+      row.style.cssText='border-left-color:'+color+';margin-left:14px;';
+      row.innerHTML='<div class="ti-check"></div><span class="ti-lbl">'+it.name+'</span><span class="ti-xp">'+(idone?'✓ ':'+')+(it.xp||0)+'</span>';
+      if(!idone)row.onclick=()=>{DB.setSubitemDone(it.id);if(it.xp>0){DB.addChoreXP(it.xp);DB.addSpendable(it.xp);showXPFlash('+'+it.xp+' XP');playXP();}renderActivities();};
+      sl.appendChild(row);sc++;
+    });
+  });
+  el('a-sched-count').textContent=sc+' items';
+  if(!sc)sl.innerHTML='<div class="loading-msg">No schedule - set one up in the Parent tab.</div>';
+
+  // Tasks
+  const cl=el('a-chore-list');cl.innerHTML='';
+  const todayTasks=DB.tasks.filter(t=>isActiveDay(t.days));
+  el('a-count').textContent=todayTasks.length+' tasks';
+  if(!todayTasks.length){cl.innerHTML='<div class="loading-msg">No tasks - add some in the Parent tab.</div>';}
+  else{todayTasks.forEach(t=>{
+    const done=DB.isTaskDone(t.id);const color=CAT_COLOR[t.category]||CAT_COLOR.chore;
+    const div=document.createElement('div');div.className='task-item'+(done?' done':'');div.style.borderLeftColor=color;
+    div.innerHTML='<div class="ti-check"></div><span class="ti-lbl">'+t.name+'</span><span class="ti-xp">'+(done?'✓ ':'+')+t.xp+'</span>';
+    if(!done)div.onclick=()=>{DB.setTaskDone(t.id);if(t.xp>0){DB.addChoreXP(t.xp);DB.addSpendable(t.xp);showXPFlash('+'+t.xp+' XP');playXP();}renderActivities();if(todayTasks.every(tt=>DB.isTaskDone(tt.id)))setTimeout(()=>showToast('All tasks done! 🔥'),400);};
+    cl.appendChild(div);
+  });}
+  el('bot-msg').textContent=pct===100?'All tasks done! 🎉':'Keep going - earn that XP.';
+}
+
+function resetActivities(){
+  DB.schedule.forEach(b=>{DB.setP('block_'+b.id,false);(b.items||[]).forEach(it=>DB.setP('sub_'+it.id,false));});
+  DB.tasks.forEach(t=>DB.setP('task_'+t.id,false));
+  renderActivities();showToast('All tasks reset.');
+}
+
+// -- REWARDS --
+function getCurrentBlock(){
+  const totalMins=new Date().getHours()*60+new Date().getMinutes();
+  for(const b of DB.schedule){
+    if(!isActiveDay(b.days))continue;
+    const sm=toMins(b.start);if(sm===null)continue;
+    const em=b.end?toMins(b.end):sm+90;if(em===null)continue;
+    if(totalMins>=sm&&totalMins<em)return{block:b,startMins:sm,endMins:em};
+  }return null;
+}
+function getNextBlock(){
+  const totalMins=new Date().getHours()*60+new Date().getMinutes();
+  return DB.schedule.find(b=>{if(!isActiveDay(b.days))return false;const sm=toMins(b.start);return sm!==null&&sm>totalMins;});
+}
+
+// -- SCHEDULE --
 function renderSchool(){
   const lessons=getTodaySubjects();
   const noday=lessons.length===0;
@@ -1398,6 +1679,8 @@ function loadLesson(idx){
   const l=lessons[idx];DB.setSchoolCurIdx(idx);
   clearInterval(schoolTimerInterval);
   schoolTimerSecs=l.duration*60;schoolTimerTotal=schoolTimerSecs;schoolTimerAlerted=false;
+  warnTriggered=false;
+  resetTimerWarning(document.querySelector('.school-hero'),el('sh-timer'),el('sh-fill'));
   reloadLessonDisplay(idx);updateSchoolTimer();
   el('sh-fill').style.width='0%';
   el('sh-fill').classList.remove('warn');
@@ -1412,20 +1695,31 @@ function loadLesson(idx){
 function tickSchoolTimer(){
   schoolTimerSecs--;if(schoolTimerSecs<0)schoolTimerSecs=0;
   updateSchoolTimer();
-  const pct=schoolTimerTotal>0?Math.min(100,Math.round(((schoolTimerTotal-schoolTimerSecs)/schoolTimerTotal)*100)):0;
+  var elapsed=schoolTimerTotal-schoolTimerSecs;
+  var pct=schoolTimerTotal>0?Math.min(100,Math.round((elapsed/schoolTimerTotal)*100)):0;
   el('sh-fill').style.width=pct+'%';
-  const warn=schoolTimerSecs<=120&&schoolTimerSecs>0;
-  el('sh-fill').classList.toggle('warn',warn);
-  el('sh-timer').classList.toggle('warn',warn);
+
+  // Apply warning system
+  applyTimerWarning(
+    schoolTimerSecs,
+    schoolTimerTotal,
+    el('sh-timer'),
+    el('sh-fill'),
+    document.querySelector('.school-hero')
+  );
+
   if(schoolTimerSecs===0&&!schoolTimerAlerted){
-    schoolTimerAlerted=true;clearInterval(schoolTimerInterval);
-    flashScreen();playAlert();
+    schoolTimerAlerted=true;
+    clearInterval(schoolTimerInterval);
+    playEndChime();
     el('sh-timer-lbl').textContent='Time\'s up!';
-    const btn=el('sh-done-btn');
-    btn.textContent='Time\'s Up - Move On';btn.className='btn btn-danger';
+    var btn=el('sh-done-btn');
+    btn.textContent='Time\'s Up - Move On';
+    btn.className='btn btn-danger';
     showToast('Time\'s up - move to the next subject.');
   }
 }
+
 function updateSchoolTimer(){el('sh-timer').textContent=fmtSecs(schoolTimerSecs);}
 
 function startSchool(){
@@ -1565,15 +1859,12 @@ function unlockReward(id,cost,name){
 // -- REPORT --
 function renderDebrief(){
   const choreXP=DB.getChoreXP();const schoolXP=DB.getSchoolXPToday();
-  let totalItems=0,doneItems=0;
-  DB.schedule.filter(b=>isActiveDay(b.days)).forEach(b=>{
-    totalItems++;if(DB.isBlockDone(b.id))doneItems++;
-    (b.items||[]).forEach(it=>{totalItems++;if(DB.isSubitemDone(it.id))doneItems++;});
-  });
-  DB.tasks.filter(t=>isActiveDay(t.days)).forEach(t=>{totalItems++;if(DB.isTaskDone(t.id))doneItems++;});
+  const lessons=getTodaySubjects();
+  const doneItems=lessons.filter((_,i)=>DB.isSubjectDone(i)).length;
+  const totalItems=lessons.length;
   const pct=totalItems>0?Math.round((doneItems/totalItems)*100):0;
   const streak=DB.getStreak();const{rank,total,next,pct:rpct}=getRankData();
-  el('d-chore-xp').textContent=choreXP;
+  el('d-chore-xp').textContent=DB.getSchoolXPToday();
   el('d-school-xp').textContent=schoolXP;
   el('d-rank-abbr').textContent=rank.abbr;
   el('d-rank-abbr2').textContent=rank.abbr;
@@ -1601,13 +1892,8 @@ function renderDebrief(){
 // PARENT DASHBOARD
 // ================================================
 function renderParent(){
-  if(!parentUnlocked){
-    // show PIN instead
-    return;
-  }
-  // parent content is always in DOM
-  // Populate settings
-  el('set-kidname').value=DB.config.kidName||'';
+  startEditing();
+  el('set-kidname').value=(STAGING?STAGING.config.kidName:DB.config.kidName)||'';
   ptab('schedule');
 }
 
@@ -1617,6 +1903,7 @@ function ptab(name){
   var t=el('ptab-'+name);if(t&&t.classList)t.classList.add('active');
   var c=el('pc-'+name);if(c&&c.classList)c.classList.add('active');
   if(name==='schedule'&&typeof renderBlockEditor==='function')renderBlockEditor();
+  else if(name==='warnings'&&typeof renderWarningsEditor==='function')renderWarningsEditor();
   else if(name==='tasks'&&typeof renderTaskEditor==='function')renderTaskEditor();
   else if(name==='school'&&typeof renderSchoolEditor==='function')renderSchoolEditor();
   else if(name==='rewards'&&typeof renderRewardEditor==='function')renderRewardEditor();
@@ -1627,7 +1914,7 @@ function ptab(name){
 function renderBlockEditor(){
   const list=el('block-editor-list');if(!list)return;
   list.innerHTML='';
-  DB.schedule.forEach(function(b,idx){
+  (STAGING||DB).schedule.forEach(function(b,idx){
     const cats=['wake','meal','school','chore','free','bed','bath','xbox'];
     const dayOpts=[['all','Every day'],['mon,tue,wed,thu,fri','Weekdays'],['mon,wed,fri','Mon/Wed/Fri'],['tue,thu','Tue/Thu'],['sat,sun','Weekends']];
     const card=document.createElement('div');
@@ -1681,12 +1968,12 @@ function renderSubitems(blockId){
   });
 }
 
-function updateBlock(id,key,val){const b=DB.schedule.find(b=>b.id===id);if(b){b[key]=val;DB.save();if(key==='block')renderBlockEditor();}}
-function deleteBlock(id){DB.schedule=DB.schedule.filter(b=>b.id!==id);DB.save();renderBlockEditor();}
-function addBlock(){DB.schedule.push({id:uid(),block:'New Block',category:'free',start:'',end:'',xp:0,days:'all',items:[]});DB.save();renderBlockEditor();}
-function addSubitem(blockId){const b=DB.schedule.find(b=>b.id===blockId);if(!b)return;if(!b.items)b.items=[];b.items.push({id:uid(),name:'',start:'',xp:0});DB.save();renderSubitems(blockId);}
-function updateSubitem(blockId,idx,key,val){const b=DB.schedule.find(b=>b.id===blockId);if(b&&b.items[idx]){b.items[idx][key]=val;DB.save();}}
-function deleteSubitem(blockId,idx){const b=DB.schedule.find(b=>b.id===blockId);if(b){b.items.splice(idx,1);DB.save();renderSubitems(blockId);}}
+function updateBlock(id,key,val){if(!STAGING)startEditing();var b=STAGING.schedule.find(function(b){return b.id===id;});if(b){b[key]=val;if(key==='block')renderBlockEditor();}}
+function deleteBlock(id){if(!STAGING)startEditing();STAGING.schedule=STAGING.schedule.filter(function(b){return b.id!==id;});renderBlockEditor();}
+function addBlock(){if(!STAGING)startEditing();STAGING.schedule.push({id:uid(),block:'New Block',category:'free',start:'',end:'',xp:0,days:'all',items:[]});renderBlockEditor();}
+function addSubitem(blockId){if(!STAGING)startEditing();var b=STAGING.schedule.find(function(b){return b.id===blockId;});if(!b)return;if(!b.items)b.items=[];b.items.push({id:uid(),name:'',start:'',xp:0});renderSubitems(blockId);}
+function updateSubitem(blockId,idx,key,val){if(!STAGING)startEditing();var b=STAGING.schedule.find(function(b){return b.id===blockId;});if(b&&b.items[idx]){b.items[idx][key]=val;}}
+function deleteSubitem(blockId,idx){if(!STAGING)startEditing();var b=STAGING.schedule.find(function(b){return b.id===blockId;});if(b){b.items.splice(idx,1);renderSubitems(blockId);}}
 
 // -- TASK EDITOR --
 function renderTaskEditor(){
@@ -1694,7 +1981,7 @@ function renderTaskEditor(){
   list.innerHTML='';
   const dayOpts=[['all','Every day'],['mon,tue,wed,thu,fri','Weekdays'],['mon,wed,fri','Mon/Wed/Fri'],['tue,thu','Tue/Thu'],['sat,sun','Weekends']];
   const cats=['chore','free','school','wake','meal','bed'];
-  DB.tasks.forEach(function(t){
+  (STAGING||DB).tasks.forEach(function(t){
     const card=document.createElement('div');card.className='editor-card';
     const hdr=document.createElement('div');hdr.className='editor-card-hdr';
     const title=document.createElement('span');title.className='editor-card-title';title.textContent=t.name||'Untitled Task';
@@ -1713,9 +2000,9 @@ function renderTaskEditor(){
   if(!DB.tasks.length)list.innerHTML='<div class="loading-msg">No tasks yet. Tap + Add Task to start.</div>';
 }
 
-function updateTask(id,key,val){const t=DB.tasks.find(t=>t.id===id);if(t){t[key]=val;DB.save();if(key==='name')renderTaskEditor();}}
-function deleteTask(id){DB.tasks=DB.tasks.filter(t=>t.id!==id);DB.save();renderTaskEditor();}
-function addTask(){DB.tasks.push({id:uid(),name:'New Task',xp:20,days:'all',category:'chore'});DB.save();renderTaskEditor();}
+function updateTask(id,key,val){if(!STAGING)startEditing();var t=STAGING.tasks.find(function(t){return t.id===id;});if(t){t[key]=val;if(key==='name')renderTaskEditor();}}
+function deleteTask(id){if(!STAGING)startEditing();STAGING.tasks=STAGING.tasks.filter(function(t){return t.id!==id;});renderTaskEditor();}
+function addTask(){if(!STAGING)startEditing();STAGING.tasks.push({id:uid(),name:'New Task',xp:20,days:'all',category:'chore'});renderTaskEditor();}
 
 // -- SCHOOL EDITOR --
 function renderSchoolEditor(){
@@ -1723,12 +2010,13 @@ function renderSchoolEditor(){
   if(togWrap){
     togWrap.innerHTML='';
     ['mon','tue','wed','thu','fri','sat','sun'].forEach(function(d){
-      const on=(DB.config.schoolDays||[]).includes(d);
+      const on=((STAGING||DB).config.schoolDays||[]).includes(d);
       const btn=document.createElement('button');
       btn.className='day-toggle'+(on?' on':'');
       btn.textContent=DAY_LABELS[d];
       btn.onclick=function(){
-        const days=DB.config.schoolDays||[];
+        if(!STAGING)startEditing();
+      const days=STAGING.config.schoolDays||[];
         const i=days.indexOf(d);
         if(i>=0)days.splice(i,1);else days.push(d);
         DB.config.schoolDays=days;DB.save();renderSchoolEditor();
@@ -1739,7 +2027,7 @@ function renderSchoolEditor(){
   const list=el('subject-editor-list');if(!list)return;
   list.innerHTML='';
   const dayOpts=[['all','Every day'],['mon,tue,wed,thu,fri','Weekdays'],['mon,wed,fri','Mon/Wed/Fri'],['tue,thu','Tue/Thu'],['sat,sun','Weekends']];
-  DB.subjects.forEach(function(s){
+  (STAGING||DB).subjects.forEach(function(s){
     const card=document.createElement('div');card.className='editor-card';
     const hdr=document.createElement('div');hdr.className='editor-card-hdr';
     const title=document.createElement('span');title.className='editor-card-title';title.textContent=s.name||'Untitled Subject';
@@ -1756,18 +2044,20 @@ function renderSchoolEditor(){
     card.append(hdr,grid);
     list.appendChild(card);
   });
+  // Populate warning settings
+
   if(!DB.subjects.length)list.innerHTML='<div class="loading-msg">No subjects yet. Tap + Add Subject.</div>';
 }
 
-function updateSubject(id,key,val){const s=DB.subjects.find(s=>s.id===id);if(s){s[key]=val;DB.save();if(key==='name')renderSchoolEditor();}}
-function deleteSubject(id){DB.subjects=DB.subjects.filter(s=>s.id!==id);DB.save();renderSchoolEditor();}
-function addSubject(){DB.subjects.push({id:uid(),name:'New Subject',duration:30,xp:50,link:'',days:'mon,tue,wed,thu,fri'});DB.save();renderSchoolEditor();}
+function updateSubject(id,key,val){if(!STAGING)startEditing();var s=STAGING.subjects.find(function(s){return s.id===id;});if(s){s[key]=val;if(key==='name')renderSchoolEditor();}}
+function deleteSubject(id){if(!STAGING)startEditing();STAGING.subjects=STAGING.subjects.filter(function(s){return s.id!==id;});renderSchoolEditor();}
+function addSubject(){if(!STAGING)startEditing();STAGING.subjects.push({id:uid(),name:'New Subject',duration:30,xp:50,link:'',days:'mon,tue,wed,thu,fri'});renderSchoolEditor();}
 
 // -- REWARD EDITOR --
 function renderRewardEditor(){
   const list=el('reward-editor-list');if(!list)return;
   list.innerHTML='';
-  DB.rewards.forEach(function(r){
+  (STAGING||DB).rewards.forEach(function(r){
     const card=document.createElement('div');card.className='editor-card';
     const hdr=document.createElement('div');hdr.className='editor-card-hdr';
     const title=document.createElement('span');title.className='editor-card-title';title.textContent=(r.icon||'⭐')+' '+(r.name||'Untitled');
@@ -1786,20 +2076,22 @@ function renderRewardEditor(){
   if(!DB.rewards.length)list.innerHTML='<div class="loading-msg">No rewards yet. Tap + Add Reward.</div>';
 }
 
-function updateReward(id,key,val){const r=DB.rewards.find(r=>r.id===id);if(r){r[key]=val;DB.save();if(key==='name'||key==='icon')renderRewardEditor();}}
-function deleteReward(id){DB.rewards=DB.rewards.filter(r=>r.id!==id);DB.save();renderRewardEditor();}
-function addReward(){DB.rewards.push({id:uid(),name:'New Reward',icon:'⭐',desc:'',cost:100,active:true});DB.save();renderRewardEditor();}
+function updateReward(id,key,val){if(!STAGING)startEditing();var r=STAGING.rewards.find(function(r){return r.id===id;});if(r){r[key]=val;if(key==='name'||key==='icon')renderRewardEditor();}}
+function deleteReward(id){if(!STAGING)startEditing();STAGING.rewards=STAGING.rewards.filter(function(r){return r.id!==id;});renderRewardEditor();}
+function addReward(){if(!STAGING)startEditing();STAGING.rewards.push({id:uid(),name:'New Reward',icon:'⭐',desc:'',cost:100,active:true});renderRewardEditor();}
 
 // -- SETTINGS EDITOR --
+
 function renderSettingsEditor(){
   el('set-kidname').value=DB.config.kidName||'';
 }
 function saveNewPin(){
   const v=el('set-pin').value;
   if(v.length!==4||isNaN(v)){showToast('PIN must be exactly 4 digits.');return;}
-  DB.config.pin=v;DB.save();
+  if(!STAGING)startEditing();
+  STAGING.config.pin=v;
   el('set-pin').value='';
-  showToast('PIN updated ✓');
+  showToast('PIN will update on Save.');
 }
 function lockParent(){
   parentUnlocked=false;
@@ -1875,7 +2167,7 @@ function checkPin(){
     const action=pinCallback;pinBuffer='';pinCallback=null;
     if(action==='skipschool')skipSchool();
     else if(action==='resetschool')resetSchool();
-    else if(action==='resetactivities')resetActivities();
+    
     else if(action==='parentunlock'){parentUnlocked=true;showParentScreen();}
   }else{
     el('pin-err').textContent='Wrong PIN - try again.';
@@ -1955,7 +2247,7 @@ function launchApp(){
   el('splash').classList.add('sp-out');
   el('app').classList.add('ready');
   applyTheme(getTheme());
-  setClock();renderBrief();renderActivities();loadWeather();updateKidName();
+  setClock();renderBrief();
   setInterval(setClock,1000);setInterval(updateUptime,1000);
   setInterval(()=>{
     if(el('s-brief').classList.contains('active'))renderBrief();
@@ -1986,6 +2278,305 @@ async function boot(){
 function updateKidName(){
   var name=DB.config.kidName||'';
   el('tb-sub').textContent=name?name+"'s daily routine":'Daily routine';
+}
+
+// ── TIMER WARNING SYSTEM ──
+var warnTriggered = false;
+
+function getWarnMins(){ return (DB.config.warnMins)||5; }
+function getWarnVisual(){ return DB.config.warnVisual||'both'; }
+function getWarnChime(){ return DB.config.warnChime||'soft'; }
+
+function playWarnChime(){
+  try{
+    var ctx=new(window.AudioContext||window.webkitAudioContext)();
+    var style=getWarnChime();
+    if(style==='none')return;
+
+    if(style==='soft'){
+      // Gentle bell tones — spaced, calm
+      [[523,0],[659,0.6],[784,1.2]].forEach(function(p){
+        var o=ctx.createOscillator(),g=ctx.createGain();
+        o.connect(g);g.connect(ctx.destination);
+        o.type='sine';o.frequency.value=p[0];
+        g.gain.setValueAtTime(0,ctx.currentTime+p[1]);
+        g.gain.linearRampToValueAtTime(0.12,ctx.currentTime+p[1]+0.05);
+        g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+p[1]+1.8);
+        o.start(ctx.currentTime+p[1]);
+        o.stop(ctx.currentTime+p[1]+2);
+      });
+    } else if(style==='bowl'){
+      [[220,0.12],[440,0.06],[660,0.03]].forEach(function(pair){
+        var o=ctx.createOscillator(),g=ctx.createGain();
+        o.connect(g);g.connect(ctx.destination);
+        o.type='sine';o.frequency.value=pair[0];
+        g.gain.setValueAtTime(0.001,ctx.currentTime);
+        g.gain.linearRampToValueAtTime(pair[1],ctx.currentTime+0.08);
+        g.gain.setValueAtTime(pair[1],ctx.currentTime+0.15);
+        g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+4.0);
+        o.start(ctx.currentTime);o.stop(ctx.currentTime+4.2);
+      });
+      var ob=ctx.createOscillator(),gb=ctx.createGain();
+      ob.connect(gb);gb.connect(ctx.destination);
+      ob.type='sine';ob.frequency.value=222;
+      gb.gain.setValueAtTime(0.001,ctx.currentTime);
+      gb.gain.linearRampToValueAtTime(0.04,ctx.currentTime+0.1);
+      gb.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+3.5);
+      ob.start(ctx.currentTime);ob.stop(ctx.currentTime+4.0);
+    } else if(style==='marimba'){
+      // Light marimba — two cheerful notes
+      [[880,0],[1047,0.25],[1319,0.5],[1047,0.75]].forEach(function(p){
+        var o=ctx.createOscillator(),g=ctx.createGain();
+        o.connect(g);g.connect(ctx.destination);
+        o.type='triangle';o.frequency.value=p[0];
+        g.gain.setValueAtTime(0,ctx.currentTime+p[1]);
+        g.gain.linearRampToValueAtTime(0.1,ctx.currentTime+p[1]+0.02);
+        g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+p[1]+0.6);
+        o.start(ctx.currentTime+p[1]);
+        o.stop(ctx.currentTime+p[1]+0.7);
+      });
+    }
+  }catch(e){}
+}
+
+function playEndChime(){
+  // Distinct end chime — three descending tones, calm but noticeable
+  try{
+    var ctx=new(window.AudioContext||window.webkitAudioContext)();
+    [[784,0,'sine'],[659,0.4,'sine'],[523,0.8,'sine']].forEach(function(p){
+      var o=ctx.createOscillator(),g=ctx.createGain();
+      o.connect(g);g.connect(ctx.destination);
+      o.type=p[2];o.frequency.value=p[0];
+      g.gain.setValueAtTime(0,ctx.currentTime+p[1]);
+      g.gain.linearRampToValueAtTime(0.13,ctx.currentTime+p[1]+0.05);
+      g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+p[1]+1.5);
+      o.start(ctx.currentTime+p[1]);
+      o.stop(ctx.currentTime+p[1]+1.8);
+    });
+  }catch(e){}
+}
+
+function applyTimerWarning(secsRemaining, totalSecs, timerEl, fillEl, cardEl){
+  var warnSecs = getWarnMins()*60;
+  var visual = getWarnVisual();
+  var tint = el('warn-tint');
+
+  if(secsRemaining <= 0){
+    // TIME'S UP
+    if(timerEl&&timerEl.style){
+      timerEl.style.color='#fff';
+      timerEl.style.background='var(--red)';
+      timerEl.style.borderRadius='10px';
+      timerEl.style.padding='4px 16px';
+    }
+    if(fillEl&&fillEl.style) fillEl.style.background='var(--red)';
+    if(cardEl&&cardEl.classList){
+      cardEl.classList.remove('timer-pulse-warn');
+      if(visual==='pulse'||visual==='both') cardEl.classList.add('timer-pulse-end');
+    }
+    if(tint&&tint.classList){tint.classList.remove('warn-active');tint.classList.add('end-active');}
+    return;
+  }
+
+  if(secsRemaining <= warnSecs){
+    // Progress 0 (just entered warning) to 1 (at 0)
+    var progress = 1 - (secsRemaining/warnSecs);
+
+    // Color shift: pill background, white text
+    if(visual==='color'||visual==='both'){
+      var bgColor=progress<0.5?'var(--xp)':'var(--red)';
+      if(timerEl&&timerEl.style){
+        timerEl.style.color='#fff';
+        timerEl.style.background=bgColor;
+        timerEl.style.borderRadius='10px';
+        timerEl.style.padding='4px 16px';
+        timerEl.style.transition='background 1.5s ease';
+      }
+      if(fillEl&&fillEl.style) fillEl.style.background=fillColor;
+    }
+
+    // Pulse
+    if(visual==='pulse'||visual==='both'){
+      if(cardEl&&cardEl.classList) cardEl.classList.add('timer-pulse-warn');
+    }
+
+    // Tint
+    if(tint&&tint.classList) tint.classList.add('warn-active');
+
+    // Chime — only once when first entering warning window
+    if(!warnTriggered){
+      warnTriggered=true;
+      playWarnChime();
+    }
+  } else {
+    // Outside warning window — reset everything
+    if(timerEl&&timerEl.style) timerEl.style.color='';
+    if(fillEl&&fillEl.style) fillEl.style.background='';
+    if(cardEl&&cardEl.classList){
+      cardEl.classList.remove('timer-pulse-warn');
+      cardEl.classList.remove('timer-pulse-end');
+    }
+    if(tint&&tint.classList){tint.classList.remove('warn-active');tint.classList.remove('end-active');}
+  }
+}
+
+function resetTimerWarning(cardEl, timerEl, fillEl){
+  warnTriggered = false;
+  if(timerEl&&timerEl.style) timerEl.style.color='';
+  if(fillEl&&fillEl.style) fillEl.style.background='';
+  if(cardEl&&cardEl.classList){
+    cardEl.classList.remove('timer-pulse-warn');
+    cardEl.classList.remove('timer-pulse-end');
+  }
+  var tint=el('warn-tint');
+  if(tint&&tint.classList){tint.classList.remove('warn-active');tint.classList.remove('end-active');}
+}
+
+// -- WARNING PREVIEW --
+var wpVisual = 'color';
+var wpChime = 'soft';
+var wpAnimating = false;
+
+function wpSetVisual(v){
+  if(!STAGING)startEditing();
+  STAGING.config.warnVisual=v;
+  wpVisual=v;
+  ['color','pulse','both'].forEach(function(id){
+    var btn=el('wopt-'+id);
+    if(btn&&btn.classList){
+      btn.classList.toggle('warn-opt-active',id===v);
+    }
+  });
+}
+
+function wpSetChime(c){
+  if(!STAGING)startEditing();
+  STAGING.config.warnChime=c;
+  wpChime=c;
+  ['soft','bowl','marimba','none'].forEach(function(id){
+    var btn=el('wopt-'+id);
+    if(btn&&btn.classList){
+      btn.classList.toggle('warn-opt-active',id===c);
+    }
+  });
+}
+
+function wpPlayChime(type){
+  try{
+    var ctx=new(window.AudioContext||window.webkitAudioContext)();
+    if(type==='soft'){
+      [[523,0],[659,0.6],[784,1.2]].forEach(function(p){
+        var o=ctx.createOscillator(),g=ctx.createGain();
+        o.connect(g);g.connect(ctx.destination);
+        o.type='sine';o.frequency.value=p[0];
+        g.gain.setValueAtTime(0,ctx.currentTime+p[1]);
+        g.gain.linearRampToValueAtTime(0.12,ctx.currentTime+p[1]+0.05);
+        g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+p[1]+1.8);
+        o.start(ctx.currentTime+p[1]);o.stop(ctx.currentTime+p[1]+2);
+      });
+    } else if(type==='bowl'){
+      [[220,0.12],[440,0.06],[660,0.03]].forEach(function(pair){
+        var o=ctx.createOscillator(),g=ctx.createGain();
+        o.connect(g);g.connect(ctx.destination);
+        o.type='sine';o.frequency.value=pair[0];
+        g.gain.setValueAtTime(0.001,ctx.currentTime);
+        g.gain.linearRampToValueAtTime(pair[1],ctx.currentTime+0.08);
+        g.gain.setValueAtTime(pair[1],ctx.currentTime+0.15);
+        g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+4.0);
+        o.start(ctx.currentTime);o.stop(ctx.currentTime+4.2);
+      });
+      var ob=ctx.createOscillator(),gb=ctx.createGain();
+      ob.connect(gb);gb.connect(ctx.destination);
+      ob.type='sine';ob.frequency.value=222;
+      gb.gain.setValueAtTime(0.001,ctx.currentTime);
+      gb.gain.linearRampToValueAtTime(0.04,ctx.currentTime+0.1);
+      gb.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+3.5);
+      ob.start(ctx.currentTime);ob.stop(ctx.currentTime+4.0);
+    } else if(type==='marimba'){
+      [[880,0],[1047,0.22],[1319,0.44],[1047,0.66]].forEach(function(p){
+        var o=ctx.createOscillator(),g=ctx.createGain();
+        o.connect(g);g.connect(ctx.destination);
+        o.type='triangle';o.frequency.value=p[0];
+        g.gain.setValueAtTime(0,ctx.currentTime+p[1]);
+        g.gain.linearRampToValueAtTime(0.1,ctx.currentTime+p[1]+0.02);
+        g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+p[1]+0.55);
+        o.start(ctx.currentTime+p[1]);o.stop(ctx.currentTime+p[1]+0.7);
+      });
+    }
+  }catch(e){}
+}
+
+function wpPreview(mode){
+  if(wpAnimating)wpReset();
+  wpAnimating=true;
+  var timerEl=el('wp-timer');
+  var fillEl=el('wp-fill');
+  var card=el('warn-preview-card');
+  if(mode==='warn'){
+    // Play chime
+    if(wpChime!=='none') wpPlayChime(wpChime);
+    // Show warning visual
+    if(wpVisual==='color'||wpVisual==='both'){
+      if(timerEl){timerEl.style.color='#fff';timerEl.style.background='var(--xp)';timerEl.style.borderRadius='10px';timerEl.style.padding='4px 16px';}
+      if(fillEl) fillEl.style.background='var(--xp)';
+      setTimeout(function(){
+        if(timerEl) timerEl.style.background='var(--red)';
+        if(fillEl) fillEl.style.background='var(--red)';
+      },2000);
+    }
+    if(wpVisual==='pulse'||wpVisual==='both'){
+      if(card) card.classList.add('warn-preview-pulse');
+    }
+    if(el('wp-timer-lbl')) el('wp-timer-lbl').textContent='warning — 4 min left';
+    el('wp-timer').textContent='04:00';
+  } else {
+    // End chime
+    try{
+      var ctx=new(window.AudioContext||window.webkitAudioContext)();
+      [[784,0],[659,0.4],[523,0.8]].forEach(function(p){
+        var o=ctx.createOscillator(),g=ctx.createGain();
+        o.connect(g);g.connect(ctx.destination);
+        o.type='sine';o.frequency.value=p[0];
+        g.gain.setValueAtTime(0,ctx.currentTime+p[1]);
+        g.gain.linearRampToValueAtTime(0.13,ctx.currentTime+p[1]+0.05);
+        g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+p[1]+1.5);
+        o.start(ctx.currentTime+p[1]);o.stop(ctx.currentTime+p[1]+1.8);
+      });
+    }catch(e){}
+    if(timerEl){timerEl.style.color='#fff';timerEl.style.background='var(--red)';timerEl.style.borderRadius='10px';timerEl.style.padding='4px 16px';}
+    if(fillEl) fillEl.style.background='var(--red)';
+    if(card) card.classList.add('warn-preview-pulse');
+    el('wp-timer').textContent="00:00";
+    if(el('wp-timer-lbl')) el('wp-timer-lbl').textContent="time\'s up!";
+  }
+}
+
+function wpReset(){
+  wpAnimating=false;
+  var timerEl=el('wp-timer');
+  var fillEl=el('wp-fill');
+  var card=el('warn-preview-card');
+  if(timerEl){timerEl.style.color='';timerEl.style.background='';timerEl.style.borderRadius='';timerEl.style.padding='';timerEl.textContent='04:00';}
+  if(fillEl){fillEl.style.background='';fillEl.style.width='30%';}
+  if(card) card.classList.remove('warn-preview-pulse');
+  if(el('wp-timer-lbl')) el('wp-timer-lbl').textContent='time remaining';
+}
+
+function renderWarningsEditor(){
+  var cfg=(STAGING||DB).config;
+  var wm=el('set-warn-mins');if(wm&&wm.tagName)wm.value=cfg.warnMins||5;
+  wpVisual=cfg.warnVisual||'both';
+  wpChime=cfg.warnChime||'soft';
+  // Sync button states
+  ['color','pulse','both'].forEach(function(id){
+    var btn=el('wopt-'+id);
+    if(btn&&btn.classList) btn.classList.toggle('warn-opt-active',id===wpVisual);
+  });
+  ['soft','bowl','marimba','none'].forEach(function(id){
+    var btn=el('wopt-'+id);
+    if(btn&&btn.classList) btn.classList.toggle('warn-opt-active',id===wpChime);
+  });
+  wpReset();
 }
 
 boot();
