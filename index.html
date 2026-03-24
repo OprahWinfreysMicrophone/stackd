@@ -679,12 +679,12 @@ body{font-family:'Sora',sans-serif;color:var(--txt);overscroll-behavior:none;-we
       <div class="tb-s">S</div>
       <div class="tb-info">
         <div class="tb-title" id="app-title">stackd</div>
-        <div class="tb-sub">Daily routine</div>
+        <div class="tb-sub" id="tb-sub">Daily routine</div>
       </div>
     </div>
     <div class="tb-r">
       <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark">🌙</button>
-      <button class="parent-btn" onclick="navParent()" title="Parent Dashboard">🔒</button>
+      <button class="parent-btn" onclick="navParent()">Parent</button>
       <div class="live-chip"><div class="live-dot blink"></div>Live</div>
       <div class="tb-clock-wrap">
         <div class="tb-clk" id="clk">--:--</div>
@@ -702,7 +702,7 @@ body{font-family:'Sora',sans-serif;color:var(--txt);overscroll-behavior:none;-we
 
           <div class="greeting-card">
             <div class="g-eyebrow" id="b-tod-label">Good morning</div>
-            <div class="g-name">Let's get it. 👊</div>
+            <div class="g-name" id="b-greeting-name">Hey! 👊</div>
             <div class="g-level">Level <span id="b-rank-display">1 · Rookie</span></div>
           </div>
 
@@ -943,7 +943,7 @@ body{font-family:'Sora',sans-serif;color:var(--txt);overscroll-behavior:none;-we
               <div class="ph">Profile <div class="ph-line"></div></div>
               <div class="setting-row">
                 <label class="setting-lbl">Kid's name</label>
-                <input class="setting-input" id="set-kidname" type="text" placeholder="e.g. Lincoln" oninput="DB.config.kidName=this.value;DB.save();">
+                <input class="setting-input" id="set-kidname" type="text" placeholder="e.g. Lincoln" oninput="DB.config.kidName=this.value;DB.save();updateKidName();renderBrief();">
               </div>
             </div>
             <div class="panel">
@@ -1220,9 +1220,11 @@ function getRankData(){
 // -- HOME --
 function renderBrief(){
   const h=new Date().getHours();
-  el('b-tod-label').textContent=h<12?'Good morning':h<17?'Good afternoon':'Good evening';
+  var kidName=DB.config.kidName||'there';
+  var tod=h<12?'Good morning':h<17?'Good afternoon':'Good evening';
+  el('b-tod-label').textContent=tod+', '+kidName+'.';
+  el("b-greeting-name").textContent=tod==="Good morning"?"Rise and grind! 💪":"Hey, "+kidName+"! 👋";
   const{rank,total,next,pct}=getRankData();
-  const kidName=DB.config.kidName||'Champion';
   el('b-rank-display').textContent=rank.name+' · '+total.toLocaleString()+' XP';
   el('b-rank-abbr').textContent=rank.abbr;
   el('b-rank-name').textContent=rank.name;
@@ -1581,7 +1583,7 @@ function renderDebrief(){
   el('d-nxp').textContent=next?next.min.toLocaleString():'MAX';
   el('d-streak').textContent=streak;
   let score,grade,color,msg;
-  if(pct===100){score='100%';grade='Perfect Day';color='var(--grn)';msg='Every single task done. That\'s a perfect day. You earned it.';}
+  if(pct===100){score='100%';grade='Perfect Day';color='var(--grn)';msg='Every single task done, '+kidName+'! That\'s a perfect day. You earned it.';}
   else if(pct>=80){score=pct+'%';grade='Strong Day';color='var(--xp)';msg='Really solid effort. A few things left - finish strong tomorrow.';}
   else if(pct>=50){score=pct+'%';grade='Getting There';color='var(--txt)';msg='You\'ve got more in you. Tomorrow is another shot at it.';}
   else if(pct>0){score=pct+'%';grade='Rough Day';color='var(--red)';msg='Not your best day - that\'s okay. Tomorrow is a fresh start.';}
@@ -1953,7 +1955,7 @@ function launchApp(){
   el('splash').classList.add('sp-out');
   el('app').classList.add('ready');
   applyTheme(getTheme());
-  setClock();renderBrief();renderActivities();loadWeather();
+  setClock();renderBrief();renderActivities();loadWeather();updateKidName();
   setInterval(setClock,1000);setInterval(updateUptime,1000);
   setInterval(()=>{
     if(el('s-brief').classList.contains('active'))renderBrief();
@@ -1979,6 +1981,11 @@ async function boot(){
     },line.delay);
   });
   setTimeout(launchApp,2200);
+}
+
+function updateKidName(){
+  var name=DB.config.kidName||'';
+  el('tb-sub').textContent=name?name+"'s daily routine":'Daily routine';
 }
 
 boot();
